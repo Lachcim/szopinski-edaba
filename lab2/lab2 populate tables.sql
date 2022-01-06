@@ -198,16 +198,78 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE PROCEDURE simulate_employee (
+    employee_id IN INTEGER,
+    activity_date IN DATE,
+    current_room IN OUT INTEGER
+)
+AS
+    next_room INTEGER;
+    next_room_gate INTEGER;
+BEGIN
+    SELECT Neighbor, GateId
+    INTO next_room, next_room_gate
+    FROM (
+        SELECT Neighbor, GateId
+        FROM (
+            SELECT COALESCE(NULLIF(RoomA, current_room), NULLIF(RoomB, current_room)) AS Neighbor, GateId
+            FROM Gates
+            WHERE RoomA = current_room OR RoomB = current_room
+        )
+        WHERE
+            Neighbor IN (
+                SELECT Room
+                FROM Permissions
+                WHERE Employee = employee_id
+            )
+        ORDER BY DBMS_RANDOM.RANDOM    
+    )
+    WHERE
+        ROWNUM = 1;
+
+    INSERT INTO Actions
+    VALUES (
+        NULL,
+        0,
+        activity_date,
+        employee_id,
+        current_room,
+        next_room_gate
+    );
+    INSERT INTO Actions
+    VALUES (
+        NULL,
+        1,
+        activity_date + 0.0007,
+        employee_id,
+        current_room,
+        next_room_gate
+    );
+    
+    current_room := next_room;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE simulate_naughty_employee (
+    employee_id IN INTEGER,
+    activity_date IN DATE,
+    current_room IN OUT INTEGER
+)
+AS
+    next_room INTEGER;
+    next_room_gate INTEGER;
+BEGIN
+    NULL;
+END;
+/
+
 DECLARE
     min_employee INTEGER;
     max_employee INTEGER;
 
-    current_room INTEGER;
-    next_room INTEGER;
-    next_room_gate INTEGER;
-
     activity_date DATE;
     end_date DATE;
+    current_room INTEGER;
     disregards_permissions BOOLEAN;
 BEGIN
     SELECT MIN(EmployeeId), MAX(EmployeeId)
@@ -229,46 +291,12 @@ BEGIN
         WHERE RoomNumber = 'Outside';
 
         WHILE activity_date < end_date LOOP
-            SELECT Neighbor, GateId
-            INTO next_room, next_room_gate
-            FROM (
-                SELECT Neighbor, GateId
-                FROM (
-                    SELECT COALESCE(NULLIF(RoomA, current_room), NULLIF(RoomB, current_room)) AS Neighbor, GateId
-                    FROM Gates
-                    WHERE RoomA = current_room OR RoomB = current_room
-                )
-                WHERE
-                    Neighbor IN (
-                        SELECT Room
-                        FROM Permissions
-                        WHERE Employee = employee_id
-                    )
-                ORDER BY DBMS_RANDOM.RANDOM    
-            )
-            WHERE
-                ROWNUM = 1;
+            IF NOT disregards_permissions THEN
+                simulate_employee(employee_id, activity_date, current_room);
+            ELSE
+                simulate_naughty_employee(employee_id, activity_date, current_room);
+            END IF;
 
-            INSERT INTO Actions
-            VALUES (
-                NULL,
-                0,
-                activity_date,
-                employee_id,
-                current_room,
-                next_room_gate
-            );
-            INSERT INTO Actions
-            VALUES (
-                NULL,
-                1,
-                activity_date + 0.00069,
-                employee_id,
-                current_room,
-                next_room_gate
-            );
-            
-            current_room := next_room;
             activity_date := activity_date + DBMS_RANDOM.VALUE(0.0014, 0.0104);
         END LOOP;
     END LOOP;
