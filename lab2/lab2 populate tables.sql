@@ -23,7 +23,7 @@ BEGIN
         
         INSERT INTO Schedules
         VALUES (
-            i,
+            NULL,
             work_start_array(1),
             work_end_array(1),
             work_start_array(2),
@@ -73,15 +73,99 @@ DECLARE
         'Researcher',
         'Accountant',
         'Executive');
+
+    min_schedule INTEGER;
+    max_schedule INTEGER;
 BEGIN
+    SELECT MIN(ScheduleId), MAX(ScheduleID)
+    INTO min_schedule, max_schedule
+    FROM Schedules
+    ORDER BY DBMS_RANDOM.VALUE;
+    
     FOR i IN 1..100 LOOP
         INSERT INTO Employees
         VALUES (
-            i,
+            NULL,
             first_names(FLOOR(DBMS_RANDOM.VALUE(1, 11))),
             surnames(FLOOR(DBMS_RANDOM.VALUE(1, 11))),
             positions(FLOOR(DBMS_RANDOM.VALUE(1, 11))),
-            FLOOR(DBMS_RANDOM.VALUE(1, 26))
+            FLOOR(DBMS_RANDOM.VALUE(min_schedule, max_schedule + 1))
         );
+    END LOOP;
+END;
+/
+
+DECLARE
+    TYPE string_array IS VARRAY(10) of VARCHAR(32);
+
+    room_desc string_array := string_array('Electronics lab',
+        'Conference room',
+        'Computer lab',
+        'Office',
+        'Kitchen',
+        'Security room',
+        'Storage room',
+        'Restroom',
+        'Stairwell',
+        'Corridor');
+    
+    total_floors INTEGER := FLOOR(DBMS_RANDOM.VALUE(1, 10));
+    rooms_on_floor INTEGER;
+    corridor_id INTEGER;
+    prev_corridor_id INTEGER;
+    branch_room_id INTEGER;
+BEGIN
+    INSERT INTO Rooms
+    VALUES (NULL, 'Outside', 'Outside')
+    RETURNING RoomId INTO corridor_id;
+
+    FOR current_floor IN 1..total_floors LOOP
+        prev_corridor_id := corridor_id;
+        
+        INSERT INTO Rooms
+        VALUES (
+            NULL,
+            current_floor * 1000,
+            'Corridor on floor ' || current_floor
+        )
+        RETURNING RoomId INTO corridor_id;
+
+        IF current_floor = 1 THEN
+            INSERT INTO Gates
+            VALUES (
+                NULL,
+                'Main entrance',
+                prev_corridor_id,
+                corridor_id
+            );
+        ELSE
+            INSERT INTO Gates
+            VALUES (
+                NULL,
+                'Passage from corridor on floor ' || (current_floor - 1) || ' to floor ' || current_floor,
+                prev_corridor_id,
+                corridor_id
+            );
+        END IF;
+
+        rooms_on_floor := FLOOR(DBMS_RANDOM.VALUE(1, 11));
+
+        FOR room_number IN 1..rooms_on_floor LOOP
+            INSERT INTO Rooms
+            VALUES (
+                NULL,
+                current_floor * 1000 + room_number,
+                room_desc(FLOOR(DBMS_RANDOM.VALUE(1, 11))) || ' on floor ' || current_floor
+            )
+            RETURNING RoomId INTO branch_room_id;
+
+            INSERT INTO Gates
+            VALUES (
+                NULL,
+                'Entrance to room ' || (current_floor * 1000 + room_number),
+                corridor_id,
+                branch_room_id
+            );
+        END LOOP;
     END LOOP;
 END;
