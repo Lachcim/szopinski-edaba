@@ -1,10 +1,10 @@
+DELETE FROM Violations;
 DELETE FROM Actions;
 DELETE FROM Employees;
 DELETE FROM Gates;
 DELETE FROM Permissions;
 DELETE FROM Rooms;
 DELETE FROM Schedules;
-DELETE FROM Violations;
 
 DECLARE
     TYPE hour_array IS VARRAY(5) OF INTEGER;
@@ -258,8 +258,59 @@ CREATE OR REPLACE PROCEDURE simulate_naughty_employee (
 AS
     next_room INTEGER;
     next_room_gate INTEGER;
+    allowed_to_enter INTEGER;
 BEGIN
-    NULL;
+    SELECT Neighbor, GateId
+    INTO next_room, next_room_gate
+    FROM (
+        SELECT Neighbor, GateId
+        FROM (
+            SELECT COALESCE(NULLIF(RoomA, current_room), NULLIF(RoomB, current_room)) AS Neighbor, GateId
+            FROM Gates
+            WHERE RoomA = current_room OR RoomB = current_room
+        )
+        ORDER BY DBMS_RANDOM.RANDOM    
+    )
+    WHERE
+        ROWNUM = 1;
+
+    SELECT COUNT(PermissionID)
+    INTO allowed_to_enter
+    FROM Permissions
+    WHERE employee = employee_id AND room = next_room;
+
+    IF allowed_to_enter > 0 THEN
+        INSERT INTO Actions
+        VALUES (
+            NULL,
+            0,
+            activity_date,
+            employee_id,
+            current_room,
+            next_room_gate
+        );
+        INSERT INTO Actions
+        VALUES (
+            NULL,
+            1,
+            activity_date + 0.0007,
+            employee_id,
+            current_room,
+            next_room_gate
+        );
+        
+        current_room := next_room;
+    ELSE
+        INSERT INTO Violations
+        VALUES (
+            NULL,
+            1,
+            activity_date,
+            employee_id,
+            next_room,
+            next_room_gate
+        );
+    END IF;
 END;
 /
 
@@ -270,7 +321,6 @@ DECLARE
     activity_date DATE;
     end_date DATE;
     current_room INTEGER;
-    disregards_permissions BOOLEAN;
 BEGIN
     SELECT MIN(EmployeeId), MAX(EmployeeId)
     INTO min_employee, max_employee
@@ -278,12 +328,7 @@ BEGIN
 
     FOR employee_id IN min_employee..max_employee LOOP
         activity_date := TRUNC(CURRENT_DATE) + DBMS_RANDOM.VALUE(0.41666, 0.42);
-        disregards_permissions := DBMS_RANDOM.VALUE() < 0.05;
         end_date := TRUNC(CURRENT_DATE) + DBMS_RANDOM.VALUE(0.46, 0.5);
-
-        IF disregards_permissions THEN
-            end_date := end_date + 0.45;
-        END IF;
 
         SELECT RoomId
         INTO current_room
@@ -291,7 +336,7 @@ BEGIN
         WHERE RoomNumber = 'Outside';
 
         WHILE activity_date < end_date LOOP
-            IF NOT disregards_permissions THEN
+            IF DBMS_RANDOM.VALUE() < 0.95 THEN
                 simulate_employee(employee_id, activity_date, current_room);
             ELSE
                 simulate_naughty_employee(employee_id, activity_date, current_room);
