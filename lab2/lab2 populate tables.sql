@@ -196,3 +196,80 @@ BEGIN
             OR FLOOR(TO_NUMBER(RoomNumber DEFAULT 0 ON CONVERSION ERROR) / 1000) = employee_floor;
     END LOOP;
 END;
+/
+
+DECLARE
+    min_employee INTEGER;
+    max_employee INTEGER;
+
+    current_room INTEGER;
+    next_room INTEGER;
+    next_room_gate INTEGER;
+
+    activity_date DATE;
+    end_date DATE;
+    disregards_permissions BOOLEAN;
+BEGIN
+    SELECT MIN(EmployeeId), MAX(EmployeeId)
+    INTO min_employee, max_employee
+    FROM Employees;
+
+    FOR employee_id IN min_employee..max_employee LOOP
+        activity_date := TRUNC(CURRENT_DATE) + DBMS_RANDOM.VALUE(0.41666, 0.42);
+        disregards_permissions := DBMS_RANDOM.VALUE() < 0.05;
+        end_date := TRUNC(CURRENT_DATE) + DBMS_RANDOM.VALUE(0.46, 0.5);
+
+        IF disregards_permissions THEN
+            end_date := end_date + 0.45;
+        END IF;
+
+        SELECT RoomId
+        INTO current_room
+        FROM Rooms
+        WHERE RoomNumber = 'Outside';
+
+        WHILE activity_date < end_date LOOP
+            SELECT Neighbor, GateId
+            INTO next_room, next_room_gate
+            FROM (
+                SELECT Neighbor, GateId
+                FROM (
+                    SELECT COALESCE(NULLIF(RoomA, current_room), NULLIF(RoomB, current_room)) AS Neighbor, GateId
+                    FROM Gates
+                    WHERE RoomA = current_room OR RoomB = current_room
+                )
+                WHERE
+                    Neighbor IN (
+                        SELECT Room
+                        FROM Permissions
+                        WHERE Employee = employee_id
+                    )
+                ORDER BY DBMS_RANDOM.RANDOM    
+            )
+            WHERE
+                ROWNUM = 1;
+
+            INSERT INTO Actions
+            VALUES (
+                NULL,
+                0,
+                activity_date,
+                employee_id,
+                current_room,
+                next_room_gate
+            );
+            INSERT INTO Actions
+            VALUES (
+                NULL,
+                1,
+                activity_date + 0.00069,
+                employee_id,
+                current_room,
+                next_room_gate
+            );
+            
+            current_room := next_room;
+            activity_date := activity_date + DBMS_RANDOM.VALUE(0.0014, 0.0104);
+        END LOOP;
+    END LOOP;
+END;
