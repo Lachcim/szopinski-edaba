@@ -1,0 +1,101 @@
+CREATE TABLE Schedules (
+	ScheduleID INTEGER PRIMARY KEY NOT NULL,
+	MondayStart INTEGER NOT NULL,
+	MondayEnd INTEGER NOT NULL,
+	TuesdayStart INTEGER NOT NULL,
+	TuesdayEnd INTEGER NOT NULL,
+	WednesdayStart INTEGER NOT NULL,
+	WednesdayEnd INTEGER NOT NULL,
+	ThursdayStart INTEGER NOT NULL,
+	ThursdayEnd INTEGER NOT NULL,
+	FridayStart INTEGER NOT NULL,
+	FridayEnd INTEGER NOT NULL,
+	SaturdayStart INTEGER NOT NULL,
+	SaturdayEnd INTEGER NOT NULL,
+	SundayStart INTEGER NOT NULL,
+	SundayEnd INTEGER NOT NULL
+);
+
+CREATE TABLE Employees (
+	EmployeeID INTEGER PRIMARY KEY NOT NULL,
+	GivenName VARCHAR(64) NOT NULL,
+	Surname VARCHAR(64) NOT NULL,
+	Position VARCHAR(128) NOT NULL,
+	Schedule INTEGER NOT NULL,
+
+	CONSTRAINT employee_has_schedule
+	FOREIGN KEY (Schedule) REFERENCES Schedules(ScheduleID)
+);
+
+CREATE TABLE Rooms (
+	RoomID INTEGER PRIMARY KEY NOT NULL,
+	RoomINTEGER VARCHAR(16) NOT NULL,
+	Description VARCHAR(64) NOT NULL
+);
+
+CREATE TABLE Permissions (
+	PermissionID INTEGER PRIMARY KEY NOT NULL,
+	Expires DATE NOT NULL,
+	Employee INTEGER NOT NULL,
+	Room INTEGER NOT NULL,
+
+	CONSTRAINT permission_employee
+	FOREIGN KEY (Employee) REFERENCES Employees(EmployeeID)
+	ON DELETE CASCADE,
+
+	CONSTRAINT permission_room
+	FOREIGN KEY (Room) REFERENCES Rooms(RoomID)
+	ON DELETE CASCADE
+);
+
+CREATE TABLE Gates (
+	GateID INTEGER PRIMARY KEY NOT NULL,
+	Location VARCHAR(64) NOT NULL,
+	RoomA INTEGER NOT NULL,
+	RoomB INTEGER NOT NULL,
+
+	CONSTRAINT gate_room_a
+	FOREIGN KEY (RoomA) REFERENCES Rooms(RoomID)
+	ON DELETE CASCADE,
+	CONSTRAINT gate_room_b
+	FOREIGN KEY (RoomB) REFERENCES Rooms(RoomID)
+	ON DELETE CASCADE,
+
+	CONSTRAINT gate_room_order CHECK (RoomA < RoomB)
+);
+
+CREATE TABLE Actions (
+	ActionID INTEGER PRIMARY KEY NOT NULL,
+	ActionType INTEGER NOT NULL,
+	ActionDate DATE NOT NULL,
+	Employee INTEGER NOT NULL,
+	Room INTEGER NOT NULL,
+	Gate INTEGER NOT NULL,
+
+	CONSTRAINT action_employee
+	FOREIGN KEY (Employee) REFERENCES Employees(EmployeeID),
+	CONSTRAINT action_room
+	FOREIGN KEY (Room) REFERENCES Rooms(RoomID),
+	CONSTRAINT action_gate
+	FOREIGN KEY (Gate) REFERENCES Gates(GateID),
+
+	CONSTRAINT a_type_in_range CHECK (ActionType BETWEEN 0 AND 2)
+);
+
+CREATE TABLE Violations (
+	ViolationID INTEGER PRIMARY KEY NOT NULL,
+	ViolationType INTEGER NOT NULL,
+	ViolationDate DATE NOT NULL,
+	Employee INTEGER NOT NULL,
+	Room INTEGER,
+	Gate INTEGER,
+
+	CONSTRAINT violation_employee
+	FOREIGN KEY (Employee) REFERENCES Employees(EmployeeID),
+	CONSTRAINT violation_room
+	FOREIGN KEY (Room) REFERENCES Rooms(RoomID),
+	CONSTRAINT violation_gate
+	FOREIGN KEY (Gate) REFERENCES Gates(GateID),
+
+	CONSTRAINT v_type_in_range CHECK (ViolationType BETWEEN 0 AND 3)
+);
