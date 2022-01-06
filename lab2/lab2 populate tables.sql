@@ -79,8 +79,7 @@ DECLARE
 BEGIN
     SELECT MIN(ScheduleId), MAX(ScheduleID)
     INTO min_schedule, max_schedule
-    FROM Schedules
-    ORDER BY DBMS_RANDOM.VALUE;
+    FROM Schedules;
     
     FOR i IN 1..100 LOOP
         INSERT INTO Employees
@@ -109,7 +108,6 @@ DECLARE
         'Stairwell',
         'Corridor');
     
-    total_floors INTEGER := FLOOR(DBMS_RANDOM.VALUE(1, 10));
     rooms_on_floor INTEGER;
     corridor_id INTEGER;
     prev_corridor_id INTEGER;
@@ -119,7 +117,7 @@ BEGIN
     VALUES (NULL, 'Outside', 'Outside')
     RETURNING RoomId INTO corridor_id;
 
-    FOR current_floor IN 1..total_floors LOOP
+    FOR current_floor IN 1..9 LOOP
         prev_corridor_id := corridor_id;
         
         INSERT INTO Rooms
@@ -167,5 +165,34 @@ BEGIN
                 branch_room_id
             );
         END LOOP;
+    END LOOP;
+END;
+/
+
+DECLARE
+    min_employee INTEGER;
+    max_employee INTEGER;
+
+    employee_floor INTEGER;
+    expiry_date DATE;
+BEGIN
+    SELECT MIN(EmployeeId), MAX(EmployeeId)
+    INTO min_employee, max_employee
+    FROM Employees;
+
+    FOR employee_id IN min_employee..max_employee LOOP
+        employee_floor := FLOOR(DBMS_RANDOM.VALUE(1, 10));
+        expiry_date := ADD_MONTHS(CURRENT_DATE, FLOOR(DBMS_RANDOM.VALUE(1, 13)));
+
+        INSERT INTO Permissions
+        SELECT
+            NULL,
+            expiry_date,
+            employee_id,
+            RoomId
+        FROM Rooms
+        WHERE
+            MOD(TO_NUMBER(RoomNumber DEFAULT 0 ON CONVERSION ERROR), 1000) = 0
+            OR FLOOR(TO_NUMBER(RoomNumber DEFAULT 0 ON CONVERSION ERROR) / 1000) = employee_floor;
     END LOOP;
 END;
