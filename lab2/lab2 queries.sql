@@ -51,3 +51,18 @@ JOIN (
     FloorPermissions.Employee = Employees.EmployeeID
     AND FloorPermissions.RoomNumber LIKE '9___'
     AND FloorPermissions.RoomNumber <> '9000';
+
+-- Find which positions commit most violations
+WITH violators AS (
+    SELECT
+        Employees.Position
+    FROM Violations
+    JOIN Employees ON Employees.EmployeeID = Violations.Employee
+)
+SELECT
+    Position,
+    COUNT(Position) AS "Violation count",
+    COUNT(Position) / (SELECT COUNT(Position) from violators) * 100 AS Percentage
+FROM violators
+GROUP BY Position
+ORDER BY "Violation count" DESC;
