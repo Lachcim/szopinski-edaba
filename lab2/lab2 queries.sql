@@ -1,3 +1,8 @@
+-- EDABA LAB 2
+-- MICHAŁ SZOPIŃSKI 300182
+-- FILE 2 OF 2
+-- This file contains the queries.
+
 -- Track employee location over time
 SELECT
     Employees.GivenName || ' ' || Employees.Surname AS "Employee",

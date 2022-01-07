@@ -1,3 +1,8 @@
+-- EDABA LAB 2
+-- MICHAŁ SZOPIŃSKI 300182
+-- FILE 1 OF 1
+-- This file contains the table population code.
+
 DELETE FROM Violations;
 DELETE FROM Actions;
 DELETE FROM Employees;
