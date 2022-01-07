@@ -25,3 +25,11 @@ FROM (
 )
 GROUP BY Destination
 ORDER BY "Visit count" DESC;
+
+-- Generate a table of rooms and their neighbors
+SELECT
+    Rooms.RoomNumber,
+    Neighbors.RoomNumber AS Neighbor
+FROM Rooms
+LEFT JOIN Gates ON Gates.RoomA = RoomID OR Gates.RoomB = RoomID
+JOIN Rooms Neighbors ON (Neighbors.RoomID = Gates.RoomA OR Neighbors.RoomID = Gates.RoomB) AND Neighbors.RoomID <> Rooms.RoomID
