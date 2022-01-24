@@ -27,7 +27,7 @@ CREATE TABLE Employees (
 	GivenName VARCHAR(64) NOT NULL,
 	Surname VARCHAR(64) NOT NULL,
 	Position VARCHAR(128) NOT NULL,
-	Schedule INTEGER NOT NULL,
+	Schedule INTEGER,
 
 	PRIMARY KEY (EmployeeID),
 
