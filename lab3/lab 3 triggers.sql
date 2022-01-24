@@ -37,3 +37,14 @@ BEGIN
         WHERE Employee = :NEW.EmployeeID AND Room = RoomID
     );
 END;
+/
+
+-- Move all newly hired women to IT (to promote equity and women in tech)
+CREATE OR REPLACE TRIGGER Promote_equity
+    BEFORE INSERT
+    ON EMPLOYEES
+    FOR EACH ROW
+    WHEN (NEW.GivenName LIKE '%a')
+BEGIN
+    :NEW.Position := 'Programmer';
+END;
