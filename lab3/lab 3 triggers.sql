@@ -1,5 +1,6 @@
 -- EDABA LAB 3
 -- MICHAŁ SZOPIŃSKI 300182
+-- FILE 1 OF 2
 -- This file contains the trigger creation code.
 
 -- Fire employees who commited a violation (aside from working overtime)
